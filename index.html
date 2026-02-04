@@ -8,20 +8,21 @@
     <style>
         :root { --primary: #2563eb; --success: #059669; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; }
         * { box-sizing: border-box; transition: all 0.2s ease; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; user-select: none; -webkit-user-select: none; }
         
-        .container { background: var(--card); padding: 40px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 800px; border: 1px solid #e2e8f0; animation: slideUp 0.5s ease; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        /* CSS BLUR FOR SCREENSHOT PROTECTION */
+        body.blurred .container { filter: blur(15px); pointer-events: none; }
+        
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; user-select: none; -webkit-user-select: none; overflow-x: hidden; }
+        
+        .container { background: var(--card); padding: 40px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 800px; border: 1px solid #e2e8f0; position: relative; z-index: 2; }
+
+        /* WATERMARK LOGIC */
+        #watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 5rem; color: rgba(0,0,0,0.03); pointer-events: none; z-index: 1; white-space: nowrap; display: none; }
 
         h2 { font-weight: 700; color: var(--primary); text-align: center; margin-bottom: 30px; }
         input[type="text"], input[type="number"] { width: 100%; padding: 14px; margin-bottom: 15px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 16px; outline: none; }
         
-        /* MASKED INPUT TO BYPASS PASSWORD MANAGER */
-        .masked-input { 
-            -webkit-text-security: disc; /* For Chrome/Brave/Safari */
-            text-security: disc; 
-            font-family: password; /* Fallback */
-        }
+        .masked-input { -webkit-text-security: disc; text-security: disc; }
 
         button { width: 100%; padding: 16px; border: none; border-radius: 12px; font-weight: 600; font-size: 16px; cursor: pointer; margin-top: 10px; }
         .btn-primary { background: var(--primary); color: white; }
@@ -32,15 +33,17 @@
         label { display: flex; align-items: center; justify-content: flex-start; text-align: left; padding: 14px 20px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; margin-bottom: 12px; font-weight: 500; }
         label:hover { border-color: var(--primary); background: #eff6ff; }
         
-        input[type="radio"] { width: 20px; height: 20px; margin: 0 15px 0 0; flex-shrink: 0; cursor: pointer; }
+        input[type="radio"] { width: 20px; height: 20px; margin: 0 15px 0 0; flex-shrink: 0; }
         .hidden { display: none !important; }
         .badge { background: #dbeafe; color: #1e40af; padding: 5px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
         #warning { background: #fef2f2; color: #991b1b; padding: 12px; border-radius: 12px; text-align: center; font-weight: 700; margin-bottom: 25px; border: 1px solid #fee2e2; }
     </style>
 </head>
-<body oncontextmenu="return false;">
+<body oncontextmenu="return false;" oncopy="return false;" onpaste="return false;">
 
-<div class="container">
+<div id="watermark"></div>
+
+<div class="container" id="content">
     <div id="v-lock">
         <h2>Station Locked</h2>
         <input type="text" id="gate-key" class="masked-input" placeholder="Instructor Access Key" autocomplete="off">
@@ -67,7 +70,7 @@
     </div>
 
     <div id="v-quiz" class="hidden">
-        <div id="warning">⚠️ ANTI-CHEAT ACTIVE: DO NOT SWITCH TABS</div>
+        <div id="warning">⚠️ SCREENSHOT PROTECTION ACTIVE: DO NOT SWITCH TABS</div>
         <div id="q-container"></div>
         <button class="btn-primary" onclick="submit()">Submit Final Attempt</button>
     </div>
@@ -84,7 +87,43 @@
     const SECRET_KEY = "abcd@1234";
     let isQuizActive = false, currentQuestions = [], teacherToken = "", questionCount = 10;
 
-    // --- SECURITY FIX: RELY ONLY ON VISIBILITY ---
+    // --- SCREENSHOT & ANTI-CHEAT PROTECTION ---
+    
+    // 1. Blur on Window Blur (Anti-Screenshot Snipping Tool)
+    window.onblur = function() {
+        if(isQuizActive) {
+            document.body.classList.add('blurred');
+            // Hum cheating penalty nahi denge kyunki false positives ho sakte hain, 
+            // lekin screenshot lene par image blur aayegi.
+        }
+    };
+
+    window.onfocus = function() {
+        document.body.classList.remove('blurred');
+    };
+
+    // 2. Tab Switch Penalty
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden && isQuizActive) penalty("Tab Switched");
+    });
+
+    // 3. Fullscreen Penalty
+    document.addEventListener("fullscreenchange", () => {
+        if (!document.fullscreenElement && isQuizActive) penalty("Exited Fullscreen");
+    });
+
+    // 4. Block PrintScreen and Inspect Keys
+    document.onkeydown = function(e) {
+        // Block PrintScreen (44)
+        if (e.keyCode == 44) {
+            navigator.clipboard.writeText(""); // Clear clipboard
+            alert("Screenshots are disabled.");
+            return false;
+        }
+        // Block F12, Ctrl+Shift+I, Ctrl+U
+        if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) return false;
+    };
+
     function penalty(reason) {
         if (isQuizActive) {
             isQuizActive = false;
@@ -93,21 +132,6 @@
             if (document.exitFullscreen) document.exitFullscreen();
         }
     }
-
-    // Only triggers when tab is hidden (True Tab Switch)
-    document.addEventListener("visibilitychange", () => {
-        if (document.hidden && isQuizActive) penalty("Tab Switched");
-    });
-
-    // Detect Exit Fullscreen (Esc Key)
-    document.addEventListener("fullscreenchange", () => {
-        if (!document.fullscreenElement && isQuizActive) penalty("Exited Fullscreen");
-    });
-
-    // Disable Right Click & Inspect
-    document.onkeydown = (e) => {
-        if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) return false;
-    };
 
     // --- APP LOGIC ---
     function unlock() {
@@ -120,9 +144,15 @@
     }
 
     async function start() {
-        const name = document.getElementById('s-name').value, reg = document.getElementById('s-reg').value;
+        const name = document.getElementById('s-name').value;
+        const reg = document.getElementById('s-reg').value;
         if (!name || !reg) return alert("Enter Name/Reg No.");
         
+        // Watermark set
+        const wm = document.getElementById('watermark');
+        wm.innerText = reg + " - " + name;
+        wm.style.display = "block";
+
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
 
         const btn = document.getElementById('start-btn');
@@ -147,3 +177,61 @@
             <div class="q-card">
                 <b style="display:block; margin-bottom:15px; font-size:1.1rem;">${i+1}. ${q.q}</b>
                 ${q.options.map((opt, idx) => `<label><input type="radio" name="a${i}" value="${idx}"> ${opt}</label>`).join('')}
+            </div>`).join('');
+    }
+
+    function submit() {
+        let ans = [];
+        currentQuestions.forEach((q, i) => {
+            const sel = document.querySelector(`input[name="a${i}"]:checked`);
+            if (sel) ans.push({ qId: q.id, selectedIdx: parseInt(sel.value) });
+        });
+        if (ans.length < currentQuestions.length) return alert("Answer all questions.");
+        if (document.exitFullscreen) document.exitFullscreen();
+        document.getElementById('watermark').style.display = "none";
+        saveRecord(null, "Regular Submission", ans);
+    }
+
+    function saveRecord(score, status, ans = []) {
+        const records = JSON.parse(localStorage.getItem('batch_marks') || "[]");
+        records.push({ name: document.getElementById('s-name').value, reg: document.getElementById('s-reg').value, answers: ans, status: status });
+        localStorage.setItem('batch_marks', JSON.stringify(records));
+        showView('v-quiz', 'v-done');
+        isQuizActive = false;
+    }
+
+    async function runSync() {
+        const pass = document.getElementById('sync-pass').value;
+        const data = JSON.parse(localStorage.getItem('batch_marks') || "[]");
+        if (pass !== SECRET_KEY) return alert("Invalid Key");
+        try {
+            await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "sync", token: pass, batch: data, totalQ: questionCount }) });
+            alert("Sync Complete!");
+            localStorage.removeItem('batch_marks');
+            updateBadge();
+        } catch (e) { alert("Sync Error."); }
+    }
+
+    function runBackup() {
+        const data = JSON.parse(localStorage.getItem('batch_marks') || "[]");
+        let csv = "Reg,Name,Status\n";
+        data.forEach(r => csv += `${r.reg},${r.name},${r.status}\n`);
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = window.URL.createObjectURL(blob);
+        a.download = `MUJ_Backup.csv`;
+        a.click();
+    }
+
+    function showView(f, t) { document.getElementById(f).classList.add('hidden'); document.getElementById(t).classList.remove('hidden'); }
+    function reset() { 
+        document.getElementById('s-name').value = ""; 
+        document.getElementById('s-reg').value = ""; 
+        document.getElementById('watermark').style.display = "none";
+        showView('v-done', 'v-login'); 
+        updateBadge(); 
+    }
+    function updateBadge() { document.getElementById('rec-count').innerText = JSON.parse(localStorage.getItem('batch_marks') || "[]").length; }
+</script>
+</body>
+</html>
