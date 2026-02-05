@@ -8,240 +8,210 @@
     <style>
         :root { --primary: #2563eb; --success: #059669; --error: #dc2626; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; }
         * { box-sizing: border-box; transition: all 0.2s ease; }
-        
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; user-select: none; -webkit-user-select: none; overflow: hidden; }
         
-        /* BLACKOUT & BLUR PROTECTION */
         #blackout { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 9999; display: none; justify-content: center; align-items: center; color: white; text-align: center; }
-        body.blurred .container { filter: blur(20px); pointer-events: none; }
-
-        .container { background: var(--card); padding: 40px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 95%; max-width: 850px; border: 1px solid #e2e8f0; position: relative; z-index: 10; animation: slideUp 0.5s ease; max-height: 90vh; overflow-y: auto; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* DYNAMIC WATERMARK */
+        body.blurred .container { filter: blur(30px); pointer-events: none; }
         #watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 4rem; color: rgba(0,0,0,0.03); pointer-events: none; z-index: 5; white-space: nowrap; font-weight: 800; display: none; }
+        #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--error); color: white; padding: 12px 24px; border-radius: 12px; font-weight: 600; z-index: 10000; display: none; box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
 
+        .container { background: var(--card); padding: 40px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 95%; max-width: 850px; border: 1px solid #e2e8f0; position: relative; z-index: 10; max-height: 90vh; overflow-y: auto; }
         h2 { font-weight: 700; color: var(--primary); text-align: center; margin-bottom: 25px; }
-        input[type="text"], input[type="number"] { width: 100%; padding: 14px; margin-bottom: 15px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 16px; outline: none; background: #fff; }
-        
-        /* MASKED INPUT FOR PASSWORD MANAGER BYPASS */
-        .masked-input { -webkit-text-security: disc; text-security: disc; }
-
-        button { width: 100%; padding: 16px; border: none; border-radius: 12px; font-weight: 600; font-size: 16px; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 14px; margin-bottom: 15px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 16px; outline: none; background: #fff; }
+        .masked { -webkit-text-security: disc; text-security: disc; }
+        button { width: 100%; padding: 16px; border: none; border-radius: 12px; font-weight: 600; font-size: 16px; cursor: pointer; margin-top: 10px; }
         .btn-primary { background: var(--primary); color: white; }
-        .btn-sync { background: var(--success); color: white; }
-        .btn-backup { background: #64748b; color: white; }
-
+        .btn-admin-entry { background: none; color: #94a3b8; font-size: 12px; margin-top: 20px; border: 1px dashed #cbd5e1; }
         .q-card { background: #f8fafc; padding: 25px; border-radius: 15px; margin-bottom: 25px; border-left: 6px solid var(--primary); }
-        label { display: flex; align-items: center; padding: 14px 20px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; margin-bottom: 12px; font-weight: 500; text-align: left; }
+        label { display: flex; align-items: center; justify-content: flex-start; padding: 14px 20px; background: white; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; margin-bottom: 12px; font-weight: 500; text-align: left; }
         label:hover { border-color: var(--primary); background: #eff6ff; }
-        
         input[type="radio"] { width: 20px; height: 20px; margin: 0 15px 0 0; flex-shrink: 0; }
         .hidden { display: none !important; }
-        .badge { background: #dbeafe; color: #1e40af; padding: 5px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
-        #warning { background: #fef2f2; color: #991b1b; padding: 12px; border-radius: 12px; text-align: center; font-weight: 700; margin-bottom: 25px; border: 1px solid #fee2e2; }
+        #warning-banner { background: #fef2f2; color: #991b1b; padding: 12px; border-radius: 12px; text-align: center; font-weight: 700; margin-bottom: 25px; border: 1px solid #fee2e2; }
     </style>
 </head>
 <body oncontextmenu="return false;" oncopy="return false;" onpaste="return false;">
 
-<div id="blackout"><div><h1>SECURITY ALERT</h1><p>Screen protection active. Please return focus to the assessment.</p></div></div>
+<div id="blackout"><div><h1>SECURITY VIOLATION</h1><p>Focus loss detected. Assessment terminated.</p></div></div>
+<div id="toast"></div>
 <div id="watermark"></div>
 
-<div class="container" id="main-ui">
-    <div id="v-lock">
-        <h2>Station Initialization</h2>
-        <input type="text" id="gate-key" class="masked-input" placeholder="Teacher Access Key" autocomplete="off">
-        <input type="number" id="q-count" value="10" placeholder="Questions per student">
-        <button class="btn-primary" onclick="unlockStation()">Unlock Assessment Station</button>
-    </div>
-
-    <div id="v-login" class="hidden">
-        <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-            <span class="badge">MUJ CSE LAB</span>
-            <span class="badge" style="background:#ecfdf5; color:#065f46;">Stored: <span id="rec-count">0</span></span>
-        </div>
-        <h2>Student Login</h2>
-        <input type="text" id="s-name" placeholder="Full Name (Official)" autocomplete="off">
+<div class="container">
+    <div id="v-student-login">
+        <h2>Student Assessment</h2>
+        <input type="text" id="s-name" placeholder="Full Name" autocomplete="off">
         <input type="text" id="s-reg" placeholder="Registration Number" autocomplete="off">
-        <button class="btn-primary" id="start-btn" onclick="startExam()">Launch Secure Environment</button>
-        
-        <div style="margin-top:40px; padding-top:20px; border-top: 2px dashed #e2e8f0;">
-            <p style="color:#64748b; font-weight:600; margin-bottom:10px;">Instructor Console</p>
-            <input type="text" id="sync-pass" class="masked-input" placeholder="Sync Key" autocomplete="off">
-            <button class="btn-sync" onclick="runSync()">Sync Records to Cloud</button>
-            <button class="btn-backup" onclick="runBackup()">Emergency CSV Backup</button>
-        </div>
+        <button class="btn-primary" id="launch-btn" onclick="launchAssessment()">Launch Secure Assessment</button>
+        <button class="btn-admin-entry" onclick="showView('v-student-login', 'v-admin-auth')">Instructor Access</button>
     </div>
 
     <div id="v-quiz" class="hidden">
-        <div id="warning">⚠️ ANTI-SCREENSHOT & TAB TRACKING ACTIVE</div>
+        <div id="warning-banner">⚠️ ANTI-CHEAT ACTIVE: SYSTEM LOCKS ON FOCUS LOSS</div>
         <div id="q-container"></div>
-        <button class="btn-primary" onclick="submitQuiz()">Complete Assessment</button>
+        <button class="btn-primary" onclick="finishQuiz()">Submit Final Attempt</button>
     </div>
 
-    <div id="v-done" class="hidden" style="text-align:center; padding: 20px 0;">
-        <div style="font-size: 60px; margin-bottom: 20px;">✅</div>
-        <h2>Submission Encrypted & Saved</h2>
-        <p>Your results are safely recorded. Inform the lab instructor.</p>
-        <button class="btn-primary" onclick="resetApp()">Next Student</button>
+    <div id="v-admin-auth" class="hidden">
+        <h2>Instructor Authorization</h2>
+        <input type="text" id="admin-input" class="masked" placeholder="Enter Station Access Key" autocomplete="off">
+        <button class="btn-primary" onclick="loginAdmin()">Authorize Station</button>
+        <button style="background:none; color:grey;" onclick="showView('v-admin-auth', 'v-student-login')">Cancel</button>
+    </div>
+
+    <div id="v-admin-dash" class="hidden">
+        <h2>Instructor Console</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; text-align: center;">
+                <small>Records</small><h3 id="rec-count">0</h3>
+            </div>
+            <div style="background: #f1f5f9; padding: 15px; border-radius: 12px; text-align: center;">
+                <small>Qs/Student</small>
+                <input type="number" id="q-count-input" value="10" style="margin-top: 10px; text-align: center;">
+            </div>
+        </div>
+        <button class="btn-primary" style="background:var(--success);" onclick="syncData()">Sync Records to Cloud</button>
+        <button class="btn-primary" style="background:#475569;" onclick="exportCSV()">Download CSV Backup</button>
+        <button class="btn-admin-entry" onclick="showView('v-admin-dash', 'v-student-login')" style="width:100%; border-style:solid;">Exit Admin Mode</button>
+    </div>
+
+    <div id="v-done" class="hidden" style="text-align:center;">
+        <div id="done-icon" style="font-size: 60px; margin-bottom: 20px;">✅</div>
+        <h2 id="done-title">Assessment Complete</h2>
+        <p id="done-msg">Informing instructor... Station ready for next student.</p>
+        <button class="btn-primary" onclick="resetForNextStudent()">Next Student</button>
     </div>
 </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7qImy-9xpWvpY6nctE5u1rYwS7wd1EMJgmA7fFgZy1FDXhvvxuc14MEjnddiGN7rkXA/exec";
-    const MASTER_TOKEN = "abcd@1234";
-    let isQuizActive = false, currentQuestions = [], teacherKey = "", questionCount = 10;
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbznZbzl0YPc2EVLwxxqknkcWztDZ_I6d1dmcXSzs0wSPmrZHChfvhFx5yEkL6Q3V7xBwA/exec";
+    // Persistent Authorization
+    let teacherKey = sessionStorage.getItem('muj_active_key') || ""; 
+    let isQuizActive = false, currentQ = [];
 
-    // --- HARDCORE PROTECTION ---
-    const blackout = document.getElementById('blackout');
-    
-    function toggleBlackout(show) {
-        if (isQuizActive) {
-            blackout.style.display = show ? 'flex' : 'none';
-            document.body.classList.toggle('blurred', show);
-        }
+    function notify(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg; t.style.display = 'block';
+        setTimeout(() => { t.style.display = 'none'; }, 3000);
     }
 
-    window.onblur = () => toggleBlackout(true);
-    window.onfocus = () => toggleBlackout(false);
-    document.addEventListener("mouseleave", () => toggleBlackout(true));
-    document.addEventListener("mouseenter", () => toggleBlackout(false));
-
-    document.addEventListener("visibilitychange", () => {
-        if (document.hidden && isQuizActive) penalty("Tab Switching Detected");
-    });
-
-    document.addEventListener("fullscreenchange", () => {
-        if (!document.fullscreenElement && isQuizActive) penalty("Fullscreen Exit Detected");
-    });
-
-    document.onkeydown = (e) => {
-        // Block PrintScreen, F12, Ctrl+U, Ctrl+Shift+I
-        if (e.keyCode == 44) {
-            navigator.clipboard.writeText("Access Denied");
-            return false;
-        }
-        if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) return false;
-    };
+    // --- SECURITY ---
+    const bo = document.getElementById('blackout');
+    window.onblur = () => { if(isQuizActive) { bo.style.display = 'flex'; document.body.classList.add('blurred'); penalty("Focus Loss Detected"); } };
+    document.addEventListener("visibilitychange", () => { if (document.hidden && isQuizActive) penalty("Tab Switch Detected"); });
+    document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && isQuizActive) penalty("Exited Fullscreen"); });
 
     function penalty(reason) {
-        if (isQuizActive) {
-            isQuizActive = false;
-            alert("SECURITY VIOLATION: " + reason + ". Your score has been set to 0.");
-            saveToLocal(0, "Cheating (" + reason + ")");
-            if (document.exitFullscreen) document.exitFullscreen();
-        }
+        if (!isQuizActive) return;
+        isQuizActive = false;
+        document.getElementById('watermark').style.display = "none";
+        document.getElementById('done-icon').innerText = "❌";
+        document.getElementById('done-title').innerText = "Terminated";
+        document.getElementById('done-title').style.color = "var(--error)";
+        document.getElementById('done-msg').innerText = "Reason: " + reason;
+        saveRecord(0, "Violation (" + reason + ")");
+        setTimeout(() => { bo.style.display = 'none'; document.body.classList.remove('blurred'); showView('v-quiz', 'v-done'); if (document.exitFullscreen) document.exitFullscreen(); }, 2000);
     }
 
-    // --- CORE LOGIC ---
-    function unlockStation() {
-        teacherKey = document.getElementById('gate-key').value;
-        questionCount = parseInt(document.getElementById('q-count').value);
-        if (teacherKey === MASTER_TOKEN) {
-            switchView('v-lock', 'v-login');
-            updateBadge();
-        } else alert("Invalid Authorization Key");
+    // --- LOGIN & AUTH ---
+    function loginAdmin() {
+        const input = document.getElementById('admin-input').value;
+        if (!input) return notify("Enter password.");
+        teacherKey = input;
+        sessionStorage.setItem('muj_active_key', input);
+        showView('v-admin-auth', 'v-admin-dash');
+        document.getElementById('q-count-input').value = localStorage.getItem('muj_q_count') || 10;
+        updateBadge();
     }
 
-    async function startExam() {
-        const name = document.getElementById('s-name').value;
-        const reg = document.getElementById('s-reg').value;
-        if (!name || !reg) return alert("Student identity required.");
+    async function launchAssessment() {
+        const n = document.getElementById('s-name').value, r = document.getElementById('s-reg').value;
+        if (!n || !r) return notify("Identification missing.");
+        if (!teacherKey) { notify("⚠️ Station not authorized."); showView('v-student-login', 'v-admin-auth'); return; }
 
-        const wm = document.getElementById('watermark');
-        wm.innerText = `${reg} | ${name} | ${new Date().toLocaleTimeString()}`;
-        wm.style.display = "block";
+        const btn = document.getElementById('launch-btn');
+        btn.innerText = "Authorizing with Server..."; btn.disabled = true;
 
-        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-
-        const btn = document.getElementById('start-btn');
-        btn.innerText = "Generating Randomized Set...";
-        btn.disabled = true;
-
+        const count = localStorage.getItem('muj_q_count') || 10;
         try {
-            const res = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "fetch", token: teacherKey, count: questionCount })
-            });
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "fetch", token: teacherKey, count: parseInt(count) }) });
             const data = await res.json();
             if (data.result === "success") {
-                currentQuestions = data.questions;
+                currentQ = data.questions;
                 renderQuiz();
-                switchView('v-login', 'v-quiz');
+                document.getElementById('watermark').innerText = `${r} | ${n}`;
+                document.getElementById('watermark').style.display = "block";
+                if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
                 isQuizActive = true;
-            } else alert(data.message);
-        } catch (e) { alert("Server Error. Check your Script URL deployment."); }
-        finally { btn.innerText = "Launch Secure Environment"; btn.disabled = false; }
+                showView('v-student-login', 'v-quiz');
+            } else { 
+                notify("Auth Failed: " + data.message); 
+                sessionStorage.removeItem('muj_active_key'); 
+                teacherKey = ""; 
+                showView('v-student-login', 'v-admin-auth'); 
+            }
+        } catch (e) { notify("Server error."); }
+        finally { btn.innerText = "Launch Secure Assessment"; btn.disabled = false; }
     }
 
     function renderQuiz() {
-        document.getElementById('q-container').innerHTML = currentQuestions.map((q, i) => `
-            <div class="q-card">
-                <b style="display:block; margin-bottom:15px; font-size:1.1rem;">${i+1}. ${q.q}</b>
-                ${q.options.map((opt, idx) => `<label><input type="radio" name="a${i}" value="${idx}"> ${opt}</label>`).join('')}
-            </div>`).join('');
+        document.getElementById('q-container').innerHTML = currentQ.map((q, i) => `
+            <div class="q-card"><b>${i+1}. ${q.q}</b><div style="margin-top:15px;">
+            ${q.options.map((o, idx) => `<label><input type="radio" name="a${i}" value="${idx}"> ${o}</label>`).join('')}
+            </div></div>`).join('');
     }
 
-    function submitQuiz() {
-        let answers = [];
-        currentQuestions.forEach((q, i) => {
+    function finishQuiz() {
+        let ans = [];
+        currentQ.forEach((q, i) => {
             const sel = document.querySelector(`input[name="a${i}"]:checked`);
-            if (sel) answers.push({ qId: q.id, selectedIdx: parseInt(sel.value) });
+            if (sel) ans.push({ qId: q.id, selectedIdx: parseInt(sel.value) });
         });
-        if (answers.length < currentQuestions.length) return alert("Please attempt all questions.");
-        if (document.exitFullscreen) document.exitFullscreen();
-        saveToLocal(null, "Regular Submission", answers);
-    }
-
-    function saveToLocal(score, status, answers = []) {
+        if (ans.length < currentQ.length) return notify("⚠️ Please attempt all questions.");
         isQuizActive = false;
+        if (document.exitFullscreen) document.exitFullscreen();
+        saveRecord(null, "Regular Submission", ans);
+        showView('v-quiz', 'v-done');
+    }
+
+    function saveRecord(score, status, ans = []) {
         document.getElementById('watermark').style.display = "none";
-        const records = JSON.parse(localStorage.getItem('batch_marks') || "[]");
-        records.push({ 
-            name: document.getElementById('s-name').value, 
-            reg: document.getElementById('s-reg').value, 
-            answers: answers, 
-            status: status 
-        });
-        localStorage.setItem('batch_marks', JSON.stringify(records));
-        switchView('v-quiz', 'v-done');
+        const m = JSON.parse(localStorage.getItem('viva_marks') || "[]");
+        m.push({ name: document.getElementById('s-name').value, reg: document.getElementById('s-reg').value, answers: ans, status: status });
+        localStorage.setItem('viva_marks', JSON.stringify(m));
     }
 
-    async function runSync() {
-        const pass = document.getElementById('sync-pass').value;
-        const data = JSON.parse(localStorage.getItem('batch_marks') || "[]");
-        if (pass !== MASTER_TOKEN) return alert("Invalid Instructor Key");
-        
+    async function syncData() {
+        const c = document.getElementById('q-count-input').value;
+        localStorage.setItem('muj_q_count', c);
+        const data = JSON.parse(localStorage.getItem('viva_marks') || "[]");
+        if (!data.length) return notify("No records.");
         try {
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "sync", token: pass, batch: data, totalQ: questionCount })
-            });
-            alert("✓ All records successfully synced to Google Sheets.");
-            localStorage.removeItem('batch_marks');
-            updateBadge();
-        } catch (e) { alert("Sync failed. Ensure internet is active."); }
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "sync", token: teacherKey, batch: data, totalQ: parseInt(c) }) });
+            const result = await res.json();
+            if(result.result === "success") { notify("✓ Sync Successful."); localStorage.removeItem('viva_marks'); updateBadge(); }
+            else notify(result.message);
+        } catch (e) { notify("Sync failed."); }
     }
 
-    function runBackup() {
-        const data = JSON.parse(localStorage.getItem('batch_marks') || "[]");
-        let csv = "Timestamp,Registration,Name,Status\n";
-        data.forEach(r => csv += `${new Date().toLocaleString()},${r.reg},${r.name},${r.status}\n`);
+    function exportCSV() {
+        const data = JSON.parse(localStorage.getItem('viva_marks') || "[]");
+        let csv = "Reg,Name,Status\n";
+        data.forEach(r => csv += `${r.reg},${r.name},${r.status}\n`);
         const blob = new Blob([csv], { type: 'text/csv' });
-        const a = document.createElement('a');
-        a.href = window.URL.createObjectURL(blob);
-        a.download = `MUJ_Assessment_Backup.csv`;
-        a.click();
+        const a = document.createElement('a'); a.href = window.URL.createObjectURL(blob); a.download = `MUJ_Backup.csv`; a.click();
     }
 
-    function switchView(f, t) { document.getElementById(f).classList.add('hidden'); document.getElementById(t).classList.remove('hidden'); }
-    function resetApp() { 
-        document.getElementById('s-name').value = ""; 
-        document.getElementById('s-reg').value = ""; 
-        switchView('v-done', 'v-login'); 
-        updateBadge(); 
+    function resetForNextStudent() {
+        document.getElementById('s-name').value = ""; document.getElementById('s-reg').value = "";
+        document.getElementById('done-icon').innerText = "✅";
+        document.getElementById('done-title').innerText = "Assessment Complete";
+        document.getElementById('done-title').style.color = "var(--primary)";
+        showView('v-done', 'v-student-login');
+        updateBadge();
     }
-    function updateBadge() { document.getElementById('rec-count').innerText = JSON.parse(localStorage.getItem('batch_marks') || "[]").length; }
+
+    function showView(f, t) { document.getElementById(f).classList.add('hidden'); document.getElementById(t).classList.remove('hidden'); }
+    function updateBadge() { document.getElementById('rec-count').innerText = JSON.parse(localStorage.getItem('viva_marks') || "[]").length; }
 </script>
 </body>
 </html>
